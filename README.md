@@ -1,156 +1,110 @@
-# AI Travel Planning System using LangGraph
+# ✈️ AI Multi-Agent Travel Planning System
 
-This project is a Real-World Multi-Agent AI System built using LangGraph.
+An autonomous, multi-agent travel planning assistant powered by **LangGraph**, **Groq (Llama 3 / Mixtral)**, and the **Model Context Protocol (MCP)**. 
 
-The system uses 4 AI agents that work together to plan a complete trip automatically.
-
-## Features
-
-- ✈️ Flight Search Agent
-- 🏨 Hotel Search Agent
-- 🗓️ Itinerary Planning Agent
-- 🤖 Final Response Agent
-- 🧠 Memory using PostgreSQL
-- 🌐 Real-time API Integration
-- 💻 Streamlit Web Interface
+Instead of searching ten different travel websites yourself, this system coordinates specialized AI agents (Flights, Hotels, Sightseeing, Weather, and Budget) to research, plan, and verify a complete personalized itinerary through a clean web interface.
 
 ---
 
-# Tech Stack
+## 💡 Quick Note: Why Don't I See Travel Output in the Terminal?
 
-- LangGraph
-- LangChain
-- Groq
-- Llama 3.3 70B
-- PostgreSQL
-- Streamlit
-- Tavily API
-- AviationStack API
+If you run the app and wonder why the terminal isn't printing the trip plan, **that is completely normal and intentional**:
+
+1. **This is a web app, not a CLI script**: When you run `streamlit run frontend.py`, the terminal only serves as the background web server engine. 
+2. **The output lives in your browser**: All agent planning, live thoughts, interactive approval buttons, and final itineraries are displayed in real-time on the **Streamlit web page (`http://localhost:8501`)**.
+3. **The terminal is only for system logs**: It only shows server status, API connection events, or errors so your terminal stays clean and readable.
 
 ---
 
-# Step 1: Create Python Environment
+## 🚀 How to Run This Project Locally (Step-by-Step)
 
-Open the terminal inside the project folder and run:
+Anyone can run this project on their own machine in under 5 minutes without needing any cloud deployment.
 
-		python -m venv langgraph_env3
-
-
-Now activate the environment:
-
-#### Windows
-
-		langgraph_env3\Scripts\activate
-
-
-#### YouTube Tuturial (Hindi) - https://youtu.be/ctHby5vhDqg
-
-#### YouTube Tuturial (English) -  https://youtu.be/_5XF5CCnbDk
+### Prerequisites
+- **Python 3.10, 3.11, or 3.12** installed on your system.
+- A free **Groq API Key** (for fast LLM inference): [console.groq.com](https://console.groq.com)
 
 ---
 
-# Step 2: Install Dependencies
-
-Run the following command:
-
-		pip install langgraph langchain langchain-openai langchain-groq langchain-community langchain-tavily psycopg[binary] psycopg_pool python-dotenv tavily-python requests streamlit
-
-		pip install -U "psycopg[binary,pool]"  langgraph-checkpoint-postgres
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/your-username/your-repo-name.git
+cd your-repo-name
+```
 
 ---
 
-# Step 3: Install PostgreSQL
+### Step 2: Create and Activate a Virtual Environment
 
-Download and install PostgreSQL: https://www.postgresql.org/download/
+**On Windows (PowerShell / Command Prompt):**
+```powershell
+python -m venv .venv
+.\.venv\Scripts\activate
+```
 
-⚠️ Important:
-While installing PostgreSQL, remember:
-- PostgreSQL Password
-- Port Number
-
-You will need them later while creating the database connection string.
-
----
-
-# Step 4: Create Database
-
-Open PostgreSQL and run:
-
-CREATE DATABASE langgraph_memory_demo;
-
+**On macOS / Linux:**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
 ---
 
-# Step 5: Setup `.env` File
-
-Create a `.env` file inside the project folder.
-
-Add the following keys:
-
-GROQ_API_KEY=your_groq_api_key
-
-TAVILY_API_KEY=your_tavily_api_key
-
-AVIATIONSTACK_API_KEY=your_aviationstack_api_key
-
-DATABASE_URL=postgresql://postgres:postgres@localhost:5433/langgraph_memory_demo
-
+### Step 3: Install Required Packages
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
-# Step 6: Get API Keys
+### Step 4: Configure Your Environment Variables (`.env`)
 
-## Get Groq API Key
+Create a file named `.env` in the root folder (or copy from `.env.example` if available):
 
-https://console.groq.com
+```ini
+# Core LLM (Required - Get for free at https://console.groq.com)
+GROQ_API_KEY=your_groq_api_key_here
 
----
+# Model Selection 
+GROQ_MODEL=openai/gpt-oss-20b
 
-## Get Tavily API Key
+# Live Tools & APIs (Optional - system uses built-in smart fallbacks if omitted)
+TAVILY_API_KEY=your_tavily_api_key_here
+AVIATIONSTACK_API_KEY=your_aviationstack_api_key_here
+OPENWEATHER_API_KEY=your_openweather_api_key_here
 
-https://tavily.com
-  
----
+# Memory / Database (Optional - defaults to memory/local storage)
+DATABASE_URL=postgresql://postgres:postgres@localhost:port_no/database_name
+```
 
-## Get AviationStack API Key
-
-https://aviationstack.com
-
----
-
-# Step 7: Run the Application
-
-#### Run Multi-Agent System in Terminal
-
-		python main.py
-
-
-This will test the multi-agent system through the terminal.
+> **Tip:** You only need `GROQ_API_KEY` to start testing immediately! If you don't have Tavily, AviationStack, or OpenWeather keys yet, the agents automatically fall back to intelligent built-in travel knowledge and tool fallbacks without crashing.
 
 ---
 
-#### Run Streamlit Web App
+### Step 5: Launch the Web App!
+Run this single command in your terminal:
+```bash
+streamlit run frontend.py
+```
 
-
-		streamlit run frontend.py
-
-
-This will launch the Multi-Agent AI web application.
-
----
-
-#### Example Prompt
-
-Plan a complete 7 days Japan trip including flights, hotels and sightseeing under 2 lakhs.
-
+Your browser will automatically open to:
+👉 **`http://localhost:8501`**
 
 ---
 
-# Project Workflow
+## 🎯 How to Use It
 
-1. Flight Agent searches flights
-2. Hotel Agent searches hotels
-3. Itinerary Agent creates travel plan
-4. Final Agent combines everything together
-5. PostgreSQL stores conversation memory
+1. Type a trip request naturally in the chat input, for example:
+   - *"Plan a 5-day holiday to Goa for 2 people with a budget of ₹50,000 in December."*
+   - *"I want a 7-day scenic trip to Switzerland for a couple starting from Zurich."*
+   - *"Plan a budget-friendly 4-day solo trip to London focused on museums and street food."*
+2. The **Planner Supervisor** identifies your destination, dates, travelers, and budget.
+3. Independent worker agents research:
+   - ✈️ **Flight Agent**: Finds airlines, schedules, and estimates.
+   - 🏨 **Hotel Agent**: Recommends hotels, areas, and nightly rates.
+   - 📍 **Activity Agent**: Curates a realistic day-by-day sightseeing plan.
+   - 🌦️ **Weather Agent**: Checks climate and rain forecasts for your travel dates.
+   - 💰 **Budget Agent**: Verifies that your total estimated expenses stay within budget.
+4. Review the consolidated itinerary in the browser, request any adjustments, or click **"Download Plan (.md)"** to save your itinerary locally whenever you want.
+
 
