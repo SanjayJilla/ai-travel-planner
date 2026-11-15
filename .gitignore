@@ -1,0 +1,56 @@
+# ==========================================
+# Secrets & Environment Variables
+# ==========================================
+.env
+*.env
+.env.*
+!.env.example
+
+# ==========================================
+# Python Virtual Environments
+# ==========================================
+.venv/
+venv/
+env/
+ENV/
+langgraph_env*/
+aviationstack-mcp/.venv/
+
+# ==========================================
+# Bytecode & Caches
+# ==========================================
+__pycache__/
+*/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# ==========================================
+# Generated Itinerary Results (Don't Store)
+# ==========================================
+travel_plans/
+*.md.bak
+outputs/
+results/
+
+# ==========================================
+# Databases & Logs
+# ==========================================
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# ==========================================
+# OS & Editor Files
+# ==========================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ==========================================
+# Unused / Redundant Folders
+# ==========================================
+AI-Travel-Planning-System-using-LangGraph/

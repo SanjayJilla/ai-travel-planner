@@ -1,495 +1,397 @@
 import os
-import streamlit as st
+import uuid
 from datetime import datetime
-from langchain_core.messages import HumanMessage
-from main import app
 
+import streamlit as st
+from langchain_core.messages import HumanMessage
+from langgraph.types import Command
+
+from graph import app
+
+
+# ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="AI Travel Booking System",
+    page_title="AI Agentic Travel Planner",
     page_icon="✈️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-st.markdown("""
+# ── Custom Styling ────────────────────────────────────────────────────────────
+st.markdown(
+    """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
-html, body, .stApp {
-    font-family: 'Inter', sans-serif;
-    background-color: #080d14;
+html, body, [class*="css"] {
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* ── Hero ── */
-.hero-wrapper {
-    position: relative;
+/* ── Hero Banner ── */
+.hero-container {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f2b48 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 20px;
-    overflow: hidden;
+    padding: 2.2rem 2.5rem;
     margin-bottom: 2rem;
-    height: 280px;
-}
-.hero-bg {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    filter: brightness(0.35);
-    position: absolute;
-    top: 0; left: 0;
-}
-.hero-content {
-    position: relative;
-    z-index: 2;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 2rem;
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
 }
 .hero-badge {
-    background: rgba(58,123,213,0.25);
-    border: 1px solid rgba(58,123,213,0.5);
-    color: #7ab8f5 !important;
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
     font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
+    font-weight: 700;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 0.3rem 0.9rem;
-    border-radius: 20px;
-    margin-bottom: 0.9rem;
+    padding: 0.25rem 0.8rem;
+    border-radius: 9999px;
     display: inline-block;
+    margin-bottom: 0.8rem;
 }
 .hero-title {
-    font-size: 2.6rem;
-    font-weight: 700;
+    font-size: 2.4rem;
+    font-weight: 800;
     color: #ffffff;
-    margin: 0 0 0.6rem;
-    line-height: 1.2;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.02em;
 }
-.hero-sub {
-    color: #94adc8;
+.hero-desc {
+    color: #94a3b8;
     font-size: 1rem;
-    max-width: 560px;
+    max-width: 680px;
+    line-height: 1.5;
+    margin: 0;
 }
 
-/* ── Input card ── */
-.input-card {
-    background: #0e1623;
-    border: 1px solid #1e2e44;
-    border-radius: 16px;
-    padding: 1.6rem 1.8rem;
-    margin-bottom: 1.5rem;
-}
-.input-label {
-    color: #7ab8f5;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
-}
-
-/* ── Quick destinations ── */
-.dest-row {
+/* ── Feature Tags ── */
+.tags-row {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
-    margin: 0.8rem 0 1.2rem;
+    margin-top: 1.2rem;
 }
-.dest-chip {
-    background: #111b2b;
-    border: 1px solid #1e3050;
-    color: #f7fdf4;
-    padding: 0.35rem 0.85rem;
-    border-radius: 20px;
-    font-size: 0.82rem;
-    cursor: pointer;
-    transition: all 0.2s;
+.tag-pill {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 0.25rem 0.7rem;
+    border-radius: 8px;
 }
-.dest-chip:hover { background: #1a2e47; border-color: #3a7bd5; color: #fff; }
 
-/* ── Generate button ── */
-div[data-testid="stButton"] > button {
-    background: linear-gradient(135deg, #1a6bbf 0%, #0d4a8a 50%, #0a3d75 100%) !important;
-    color: #ffffff !important;
-    border: none !important;
-    border-radius: 12px !important;
-    padding: 0.85rem 2.5rem !important;
-    font-size: 1.05rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.03em !important;
+/* ── Table Styling & Overlap Prevention ── */
+table {
     width: 100% !important;
-    box-shadow: 0 0 24px rgba(26,107,191,0.35), 0 4px 15px rgba(0,0,0,0.4) !important;
-    transition: all 0.3s ease !important;
+    display: block !important;
+    overflow-x: auto !important;
+    border-collapse: collapse !important;
+    margin: 1.2rem 0 !important;
+    background: #0f172a;
+    border-radius: 8px;
 }
-div[data-testid="stButton"] > button:hover {
-    box-shadow: 0 0 40px rgba(26,107,191,0.6), 0 6px 20px rgba(0,0,0,0.5) !important;
-    transform: translateY(-2px) !important;
-    background: linear-gradient(135deg, #2278d4 0%, #1057a0 50%, #0d4a8a 100%) !important;
+th, td {
+    padding: 10px 14px !important;
+    font-size: 0.86rem !important;
+    border: 1px solid #1e293b !important;
+    text-align: left !important;
 }
-div[data-testid="stButton"] > button:active {
-    transform: translateY(0px) !important;
+th {
+    background-color: #1e293b !important;
+    color: #38bdf8 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    font-size: 0.78rem !important;
+    letter-spacing: 0.05em;
+}
+td {
+    color: #cbd5e1 !important;
+}
+tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.02) !important;
 }
 
-/* ── Agent status cards ── */
-[data-testid="stStatusWidget"] {
-    background: #0e1a2e !important;
-    border: 1px solid #1e3050 !important;
-    border-radius: 12px !important;
+/* ── Content Cards ── */
+.glass-card {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 14px;
+    padding: 1.2rem 1.4rem;
+    margin-bottom: 1.2rem;
 }
-[data-testid="stStatusWidget"] > div:first-child {
-    background: #0e1a2e !important;
-    border-radius: 12px 12px 0 0 !important;
-}
-[data-testid="stStatusWidget"] details,
-[data-testid="stStatusWidget"] details > div,
-[data-testid="stStatusWidget"] [data-testid="stVerticalBlock"] {
-    background: #0a1520 !important;
-    color: #ffffff !important;
-    padding: 0.25rem 0.5rem !important;
-}
-[data-testid="stStatusWidget"] * { color: #ffffff !important; }
-[data-testid="stStatusWidget"] a { color: #4ea8f0 !important; }
-[data-testid="stStatusWidget"] hr { border-color: #1e3050 !important; }
-
-/* ── Section headers ── */
-.sec-head {
+.card-header {
+    color: #38bdf8;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.8rem;
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    margin: 2rem 0 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #1e2e44;
+    gap: 0.4rem;
 }
-.sec-head span { font-size: 1.15rem; font-weight: 600; color: #e0edf8; }
 
-/* ── Metric bar ── */
-.metric-row {
-    display: flex;
-    gap: 1rem;
+/* ── HITL Banner ── */
+.hitl-banner {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.1) 0%, rgba(202, 138, 4, 0.05) 100%);
+    border: 1px solid rgba(234, 179, 8, 0.35);
+    border-radius: 16px;
+    padding: 1.4rem 1.6rem;
     margin: 1.5rem 0;
 }
-.metric-box {
-    flex: 1;
-    background: #0e1623;
-    border: 1px solid #1e2e44;
-    border-radius: 12px;
-    padding: 1rem 1.2rem;
-    text-align: center;
-}
-.metric-val { font-size: 1.8rem; font-weight: 700; color: #4ea8f0; }
-.metric-lbl { font-size: 0.78rem; color: #5a7a96; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.08em; }
-
-/* ── Final plan ── */
-.final-card {
-    background: linear-gradient(160deg, #0c1a2e 0%, #0a1520 100%);
-    border: 1px solid #1e3a5c;
-    border-left: 4px solid #3a7bd5;
-    border-radius: 14px;
-    padding: 1.8rem;
-    line-height: 1.8;
-    color: #cce0f5;
-    font-size: 0.95rem;
-}
-
-/* ── Save bar ── */
-.save-bar {
-    background: #0e1623;
-    border: 1px solid #1e2e44;
-    border-radius: 10px;
-    padding: 0.85rem 1.2rem;
-    color: #5a8ab0;
-    font-size: 0.88rem;
-    margin-top: 0.5rem;
-}
-
-/* ── Sidebar ── */
-section[data-testid="stSidebar"] {
-    background: #090e18 !important;
-    border-right: 1px solid #141f30 !important;
-}
-.sidebar-chip {
-    background: #0e1a2b;
-    border: 1px solid #1a2e44;
-    border-radius: 8px;
-    padding: 0.45rem 0.75rem;
-    margin-bottom: 0.4rem;
-    font-size: 0.83rem;
-    color: #7aa8cc;
-}
-.sidebar-title { color: #e0edf8; font-size: 1rem; font-weight: 600; margin: 1rem 0 0.5rem; }
-
-/* Hide branding */
-#MainMenu, footer, header { visibility: hidden; }
-
-/* Textarea */
-.stTextArea textarea {
-    background: #0a1520 !important;
-    border: 1px solid #1e2e44 !important;
-    border-radius: 10px !important;
-    color: #e8f4ff !important;
-    font-size: 0.95rem !important;
-    resize: none !important;
-}
-.stTextArea textarea:focus {
-    border-color: #3a7bd5 !important;
-    box-shadow: 0 0 0 2px rgba(58,123,213,0.2) !important;
-}
-.stTextArea textarea::placeholder { color: #4a6a85 !important; }
-
-/* Text input (sidebar User ID field) */
-input[type="text"], .stTextInput input {
-    background: #0e1a2b !important;
-    border: 1px solid #1a2e44 !important;
-    border-radius: 8px !important;
-    color: #e0edf8 !important;
-}
-input[type="text"]:focus, .stTextInput input:focus {
-    border-color: #3a7bd5 !important;
-    box-shadow: 0 0 0 2px rgba(58,123,213,0.2) !important;
-}
-input[type="text"]::placeholder { color: #3a5570 !important; }
-
-/* All Streamlit labels — dark bg → light text */
-.stTextInput label, .stTextArea label,
-.stSelectbox label, .stNumberInput label {
-    color: #7ab8f5 !important;
-    font-size: 0.82rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.08em !important;
-}
-
-/* General markdown / paragraph text */
-.stMarkdown p, .stMarkdown li, .stMarkdown td, .stMarkdown th {
-    color: #cce0f5 !important;
-}
-.stMarkdown h1, .stMarkdown h2, .stMarkdown h3 { color: #e8f4ff !important; }
-.stMarkdown code {
-    background: #0e1a2b !important;
-    color: #7ab8f5 !important;
-    padding: 0.15em 0.4em;
-    border-radius: 4px;
-}
-
-/* Metric labels — was #5a7a96 (too dim on dark bg) */
-.metric-lbl { color: #7aa8cc !important; }
-
-/* Save bar — was #5a8ab0 (slightly dim) */
-.save-bar { color: #8ab8d8 !important; }
-.save-bar code { color: #7ab8f5 !important; background: #0a1520 !important; }
-
-/* Streamlit warning / info / success on dark bg */
-.stAlert { background: #0e1a2b !important; border-radius: 10px !important; }
-.stAlert p, .stAlert div { color: #e0edf8 !important; }
-
-/* Sidebar text & dividers */
-section[data-testid="stSidebar"] p,
-section[data-testid="stSidebar"] span,
-section[data-testid="stSidebar"] label,
-section[data-testid="stSidebar"] .stMarkdown { color: #a0c4e0 !important; }
-section[data-testid="stSidebar"] hr { border-color: #1a2e44 !important; }
-
-/* Download button — light bg → dark text  */
-div[data-testid="stDownloadButton"] > button {
-    background: #1a3a5c !important;
-    color: #e8f4ff !important;
-    border: 1px solid #2a5080 !important;
-    border-radius: 10px !important;
+.hitl-title {
+    color: #facc15;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
 }
 </style>
-""", unsafe_allow_html=True)
-
-# ── Sidebar ───────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("<div class='sidebar-title'>🌍 AI Travel Planner</div>", unsafe_allow_html=True)
-    st.markdown("---")
-
-    thread_id = st.text_input("👤 User ID", value="aarohi_user",
-                              help="Your session ID — keeps travel history across queries")
-
-    st.markdown("<div class='sidebar-title'>Powered by</div>", unsafe_allow_html=True)
-    for tech in ["🔗 LangGraph", "🧠 Groq · LLaMA 3.3 70B", "🐘 PostgreSQL", "🔍 Tavily Search", "✈️ AviationStack"]:
-        st.markdown(f"<div class='sidebar-chip'>{tech}</div>", unsafe_allow_html=True)
-
-    st.markdown("<div class='sidebar-title'>Agent Pipeline</div>", unsafe_allow_html=True)
-    for step in ["① Flight Agent", "② Hotel Agent", "③ Itinerary Agent", "④ Final Agent"]:
-        st.markdown(f"<div class='sidebar-chip'>{step}</div>", unsafe_allow_html=True)
-
-# ── Hero ──────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="hero-wrapper">
-    <img class="hero-bg"
-         src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1400&q=80"
-         alt="airplane above clouds"/>
-    <div class="hero-content">
-        <div class="hero-badge">✦ Multi-Agent AI System</div>
-        <div class="hero-title">✈️ AI Travel Booking System</div>
-        <div class="hero-sub">Four specialized agents work together — searching flights, hotels, building an itinerary, and delivering your perfect trip plan.</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# ── Destination image strip ───────────────────────────────────────────────────
-DESTINATIONS = [
-    ("🇯🇵 Tokyo",     "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=300&q=70"),
-    ("🇫🇷 Paris",     "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=300&q=70"),
-    ("🇹🇭 Bangkok",   "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=300&q=70"),
-    ("🇮🇹 Rome",      "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=300&q=70"),
-    ("🇦🇪 Dubai",     "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=300&q=70"),
-]
-
-cols = st.columns(5)
-for col, (name, img_url) in zip(cols, DESTINATIONS):
-    with col:
-        st.markdown(f"""
-        <div style="border-radius:10px;overflow:hidden;position:relative;height:90px;cursor:pointer;">
-            <img src="{img_url}" style="width:100%;height:100%;object-fit:cover;filter:brightness(0.55);" />
-            <div style="position:absolute;bottom:8px;left:0;right:0;text-align:center;
-                        color:#fff;font-size:0.8rem;font-weight:600;">{name}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ── Input ─────────────────────────────────────────────────────────────────────
-st.markdown("<div class='input-label'>🗺️ Describe your trip</div>", unsafe_allow_html=True)
-
-QUICK = ["7-day Japan under ₹2L", "Paris trip for 5 days", "Dubai weekend trip", "Bali backpacking 10 days"]
-qcols = st.columns(len(QUICK))
-quick_fill = ""
-for qc, label in zip(qcols, QUICK):
-    with qc:
-        if st.button(label, key=f"q_{label}"):
-            quick_fill = label
-
-user_query = st.text_area(
-    "",
-    value=quick_fill,
-    placeholder="e.g. Plan a complete 7-day Japan trip including flights, hotels and sightseeing under ₹2 lakhs",
-    height=100,
-    label_visibility="collapsed",
+""",
+    unsafe_allow_html=True,
 )
 
-generate = st.button("🚀  Generate My Travel Plan", use_container_width=True)
+# ── Sidebar Session ───────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("### ⚙️ Session & Storage")
+    user_id = st.text_input("User ID", value="demo_traveler")
 
-# ── Agent pipeline ────────────────────────────────────────────────────────────
-AGENT_META = {
-    "flight_agent":    ("✈️", "Flight Agent"),
-    "hotel_agent":     ("🏨", "Hotel Agent"),
-    "itinerary_agent": ("🗓️", "Itinerary Agent"),
-    "final_agent":     ("🧠", "Final Agent"),
-}
+    if "thread_id" not in st.session_state:
+        st.session_state.thread_id = f"{user_id}_{uuid.uuid4().hex[:6]}"
 
-if generate:
-    if not user_query.strip():
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("🔄 New Trip", use_container_width=True):
+            st.session_state.thread_id = f"{user_id}_{uuid.uuid4().hex[:6]}"
+            st.session_state.pop("waiting_for_approval", None)
+            st.session_state.pop("latest_result", None)
+            st.session_state.trip_query = ""
+            st.rerun()
+
+    st.caption(f"**Thread ID:** `{st.session_state.thread_id}`")
+
+    st.markdown("---")
+    st.markdown("### 🗄️ Storage Status")
+    try:
+        from config import DATABASE_URL
+        if DATABASE_URL:
+            st.success("💾 Checkpoints: **PostgreSQL / Memory**")
+        else:
+            st.info("🧠 Checkpoints: **In-Memory (RAM)**")
+    except Exception:
+        st.info("🧠 Checkpoints: **In-Memory**")
+
+    st.caption("Active checkpoints preserve conversation turns across approval steps.")
+
+# ── Hero Banner ───────────────────────────────────────────────────────────────
+st.markdown(
+    """
+<div class="hero-container">
+    <div class="hero-badge">Autonomous Multi-Agent System</div>
+    <h1 class="hero-title">AI Itinerary & Travel Planner</h1>
+    <p class="hero-desc">
+        Powered by LangGraph Supervisor orchestration, real-time MCP tool servers, automated Input Guardrails, and interactive Human-in-the-Loop approval.
+    </p>
+    <div class="tags-row">
+        <span class="tag-pill">🛡️ Input Guardrail</span>
+        <span class="tag-pill">✈️ AviationStack MCP</span>
+        <span class="tag-pill">🏨 Tavily Search MCP</span>
+        <span class="tag-pill">⛅ OpenWeather MCP</span>
+        <span class="tag-pill">💰 Budget Analyst</span>
+        <span class="tag-pill">👤 Human-in-the-Loop</span>
+    </div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+
+# ── Quick Suggestions ─────────────────────────────────────────────────────────
+st.markdown("##### 💡 Quick Suggestions")
+quick_queries = [
+    "🇯🇵 7-day Tokyo trip under ₹2 Lakhs with budget stays",
+    "🇦🇪 4-day Dubai weekend getaway with luxury experiences",
+    "🇮🇩 10-day Bali backpacking trip under $1,200",
+]
+
+if "trip_query" not in st.session_state:
+    st.session_state.trip_query = ""
+
+def set_quick_query(text: str):
+    st.session_state.trip_query = text
+
+q_cols = st.columns(len(quick_queries))
+for i, col in enumerate(q_cols):
+    with col:
+        st.button(
+            quick_queries[i],
+            key=f"quick_{i}",
+            on_click=set_quick_query,
+            args=(quick_queries[i],),
+            use_container_width=True,
+        )
+
+# ── Travel Input ──────────────────────────────────────────────────────────────
+query = st.text_area(
+    "Where would you like to travel?",
+    key="trip_query",
+    placeholder="e.g. Plan a complete 7-day Japan trip including flights, hotels, and sightseeing under ₹2 Lakhs.",
+    height=100,
+)
+
+config = {"configurable": {"thread_id": st.session_state.thread_id}}
+
+col_plan, _ = st.columns([1, 3])
+with col_plan:
+    plan_clicked = st.button("🚀 Generate Draft Itinerary", type="primary", use_container_width=True)
+
+if plan_clicked:
+    if not query.strip():
         st.warning("Please describe your trip first.")
     else:
-        config = {"configurable": {"thread_id": thread_id}}
-        collected = {"flight_results": "", "hotel_results": "",
-                     "itinerary": "", "final_response": "", "llm_calls": 0}
+        with st.spinner("🤖 Supervisor evaluating guardrails & orchestrating specialist agents..."):
+            result = app.invoke(
+                {
+                    "messages": [HumanMessage(content=query)],
+                    "user_id": user_id,
+                    "user_query": query,
+                    "flight_results": "",
+                    "hotel_results": "",
+                    "weather_results": "",
+                    "budget_results": "",
+                    "itinerary": "",
+                    "final_response": "",
+                    "llm_calls": 0,
+                },
+                config=config,
+            )
 
+        st.session_state.latest_result = result
+        st.session_state.waiting_for_approval = "__interrupt__" in result
+        st.rerun()
+
+# ── Results Presentation ──────────────────────────────────────────────────────
+result = st.session_state.get("latest_result")
+
+if result:
+    # 1. Guardrail Blocked
+    if not result.get("selected_agents"):
+        st.error("🛡️ **Request Blocked by Input Guardrail**")
+        st.warning(
+            result.get(
+                "supervisor_reasoning",
+                "This request was classified as off-topic or unsafe and will not be processed.",
+            )
+        )
+    else:
+        # 2. Supervisor Plan Overview
+        st.markdown("### 📋 Supervisor Agent Plan")
+        with st.expander("🔍 View Supervisor Routing & Constraints", expanded=True):
+            st.markdown(f"**Reasoning:** {result.get('supervisor_reasoning', 'N/A')}")
+            agents = result.get("selected_agents", [])
+            badges = " ".join([f"`{a}`" for a in agents])
+            st.markdown(f"**Dispatched Specialist Agents:** {badges}")
+            constraints = result.get("trip_constraints", {})
+            if constraints:
+                st.json(constraints)
+
+        # 3. Specialist Results in Clean Full-Width Tabs (Zero Table Overlap)
+        st.markdown("### 🔍 Specialist Findings")
+        tab_titles = []
+        if result.get("flight_results"):
+            tab_titles.append("✈️ Flight Guidance")
+        if result.get("hotel_results"):
+            tab_titles.append("🏨 Hotel Research")
+        if result.get("weather_results"):
+            tab_titles.append("⛅ Weather & Forecast")
+        if result.get("budget_results"):
+            tab_titles.append("💰 Budget Assessment")
+
+        if tab_titles:
+            tabs = st.tabs(tab_titles)
+            tab_idx = 0
+            if result.get("flight_results"):
+                with tabs[tab_idx]:
+                    st.markdown(result.get("flight_results"))
+                tab_idx += 1
+            if result.get("hotel_results"):
+                with tabs[tab_idx]:
+                    st.markdown(result.get("hotel_results"))
+                tab_idx += 1
+            if result.get("weather_results"):
+                with tabs[tab_idx]:
+                    st.markdown(result.get("weather_results"))
+                tab_idx += 1
+            if result.get("budget_results"):
+                with tabs[tab_idx]:
+                    st.markdown(result.get("budget_results"))
+                tab_idx += 1
+
+        # 4. Draft Itinerary Display
         st.markdown("---")
-        st.markdown("<div class='sec-head'><span>🤖 Agent Pipeline — Live</span></div>",
-                    unsafe_allow_html=True)
+        st.markdown("### 🗓️ Draft Travel Plan (Pre-Approval)")
+        if "__interrupt__" in result:
+            draft = result["__interrupt__"][0].value.get("draft_itinerary", "")
+        else:
+            draft = result.get("itinerary", "")
+        st.markdown(draft or "_No draft generated yet._")
 
-        for chunk in app.stream(
-            {
-                "messages": [HumanMessage(content=user_query)],
-                "user_query": user_query,
-                "flight_results": "",
-                "hotel_results": "",
-                "itinerary": "",
-                "llm_calls": 0,
-            },
-            config=config,
-            stream_mode="updates",
-        ):
-            for node_name, state_update in chunk.items():
-                icon, label = AGENT_META.get(node_name, ("🔧", node_name))
+# ── Human-in-the-Loop (HITL) Interactive Approval ────────────────────────────
+if st.session_state.get("waiting_for_approval"):
+    st.markdown(
+        """
+    <div class="hitl-banner">
+        <div class="hitl-title">👤 Human-in-the-Loop Review Required</div>
+        <p style="color: #cbd5e1; margin-bottom: 0;">
+            The graph has paused execution. Please review the draft above and approve or provide feedback to request revisions.
+        </p>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
 
-                with st.status(f"{icon}  {label}", state="complete", expanded=True):
-                    if node_name == "flight_agent":
-                        text = state_update.get("flight_results", "")
-                        collected["flight_results"] = text
-                        st.markdown(text or "_No flight data returned._")
+    col_choice, col_fb = st.columns([1, 2])
+    with col_choice:
+        decision = st.radio(
+            "Your Decision:",
+            ["✅ Approve Plan", "🔄 Request Revisions"],
+            index=0,
+            horizontal=False,
+        )
+    with col_fb:
+        user_feedback = st.text_area(
+            "Revision feedback (optional if approving):",
+            placeholder="e.g. Please change day 3 to include a temple visit and find hotels closer to Shinjuku station.",
+            disabled=(decision == "✅ Approve Plan"),
+            height=90,
+        )
 
-                    elif node_name == "hotel_agent":
-                        text = state_update.get("hotel_results", "")
-                        collected["hotel_results"] = text
-                        st.markdown(text or "_No hotel data returned._")
+    if st.button("🚀 Submit Decision & Resume Pipeline", type="primary"):
+        with st.spinner("Resuming graph execution to generate final response..."):
+            final_result = app.invoke(
+                Command(
+                    resume={
+                        "approved": (decision == "✅ Approve Plan"),
+                        "feedback": user_feedback if decision != "✅ Approve Plan" else "",
+                    }
+                ),
+                config=config,
+            )
 
-                    elif node_name == "itinerary_agent":
-                        text = state_update.get("itinerary", "")
-                        collected["itinerary"] = text
-                        st.markdown(text or "_No itinerary generated._")
+        st.session_state.latest_result = final_result
+        st.session_state.waiting_for_approval = False
+        st.rerun()
 
-                    elif node_name == "final_agent":
-                        msgs = state_update.get("messages", [])
-                        text = msgs[-1].content if msgs else ""
-                        collected["final_response"] = text
-                        st.markdown(text or "_No final response._")
+# ── Final Polished Response ──────────────────────────────────────────────────
+final_result = st.session_state.get("latest_result")
+if final_result and final_result.get("final_response") and final_result.get("selected_agents"):
+    st.markdown("---")
+    st.markdown("## 🌟 Final Confirmed Travel Plan")
+    st.markdown(final_result["final_response"])
 
-                    collected["llm_calls"] = state_update.get("llm_calls", collected["llm_calls"])
-
-        # Metrics
-        st.markdown(f"""
-        <div class="metric-row">
-            <div class="metric-box"><div class="metric-val">4</div><div class="metric-lbl">Agents Run</div></div>
-            <div class="metric-box"><div class="metric-val">{collected['llm_calls']}</div><div class="metric-lbl">LLM Calls</div></div>
-            <div class="metric-box"><div class="metric-val">✅</div><div class="metric-lbl">Status</div></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Final plan card
-        if collected["final_response"]:
-            st.markdown("<div class='sec-head'><span>🧠 Final Travel Plan</span></div>",
-                        unsafe_allow_html=True)
-            st.markdown(f"<div class='final-card'>{collected['final_response']}</div>",
-                        unsafe_allow_html=True)
-
-        # Save
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"travel_plan_{timestamp}.md"
-        save_dir = os.path.join(os.path.dirname(__file__), "travel_plans")
-        os.makedirs(save_dir, exist_ok=True)
-
-        file_content = f"""# Travel Plan
-**Query:** {user_query}
-**Generated:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-**User ID:** {thread_id}
-
----
-
-## ✈️ Flight Information
-{collected['flight_results'] or 'N/A'}
-
----
-
-## 🏨 Hotel Information
-{collected['hotel_results'] or 'N/A'}
-
----
-
-## 🗓️ Itinerary
-{collected['itinerary'] or 'N/A'}
-
----
-
-## 🧠 Final Travel Plan
-{collected['final_response'] or 'N/A'}
-
----
-*LLM Calls: {collected['llm_calls']}*
-"""
-        with open(os.path.join(save_dir, filename), "w", encoding="utf-8") as f:
-            f.write(file_content)
-
-        dl_col, info_col = st.columns([1, 3])
-        with dl_col:
-            st.download_button("⬇️ Download Plan", data=file_content,
-                               file_name=filename, mime="text/markdown",
-                               use_container_width=True)
-        with info_col:
-            st.markdown(f"<div class='save-bar'>📁 Auto-saved → <code>travel_plans/{filename}</code></div>",
-                        unsafe_allow_html=True)
+    st.download_button(
+        "⬇️ Download Plan (.md)",
+        data=final_result["final_response"],
+        file_name=f"itinerary_{st.session_state.thread_id}.md",
+        mime="text/markdown",
+        use_container_width=True,
+    )

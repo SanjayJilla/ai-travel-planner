@@ -7,8 +7,6 @@
 # https://aviationstack.com/ 
 # pip install requests
 
-
-    
 import os
 import requests
 from dotenv import load_dotenv
