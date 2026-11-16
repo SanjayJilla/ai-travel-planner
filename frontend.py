@@ -378,7 +378,9 @@ if st.session_state.get("waiting_for_approval"):
             )
 
         st.session_state.latest_result = final_result
-        st.session_state.waiting_for_approval = False
+        st.session_state.waiting_for_approval = "__interrupt__" in final_result
+        if decision != "✅ Approve Plan":
+            st.toast("🔄 Itinerary revised based on your feedback! Please review the updated draft below.", icon="✨")
         st.rerun()
 
 # ── Final Polished Response ──────────────────────────────────────────────────

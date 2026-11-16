@@ -42,11 +42,72 @@ def _json_from_llm(text: str) -> dict:
         }
 
 
+# ── GUARDRAIL 1: Security & Prompt Injection Detector ─────────────────────────
+SECURITY_INJECTION_PATTERNS = [
+    "ignore previous instructions",
+    "ignore all instructions",
+    "ignore your instructions",
+    "system prompt",
+    "reveal your prompt",
+    "you are now dan",
+    "jailbreak",
+    "drop table",
+    "drop database",
+    "sudo ",
+    "rm -rf",
+    "delete from",
+    "bypass safety",
+    "unrestricted mode",
+    "developer mode",
+    "execute shell",
+]
+
+
+def check_security_guardrail(query: str) -> tuple[bool, str]:
+    """Inspect query for prompt injection, jailbreaking, or adversarial commands."""
+    q_lower = query.lower()
+    for pattern in SECURITY_INJECTION_PATTERNS:
+        if pattern in q_lower:
+            return False, f"Adversarial security attack detected ('{pattern}')"
+    return True, ""
+
+
+# ── GUARDRAIL 2: Budget Sanity Check ──────────────────────────────────────────
+def check_budget_sanity(constraints: dict) -> tuple[bool, str]:
+    """Rule-based sanity check on requested budget vs destination."""
+    import re
+    budget_raw = str(constraints.get("budget", "")).lower()
+    destination = str(constraints.get("destination", "the selected destination"))
+    
+    amounts = re.findall(r'\d+[\d,]*', budget_raw)
+    if amounts:
+        clean_num = float(amounts[0].replace(",", ""))
+        if ("$" in budget_raw or "usd" in budget_raw or "eur" in budget_raw) and clean_num < 40:
+            return False, f"Budget of ${clean_num:,.0f} is below the absolute minimum subsistence baseline ($40/day) for {destination}."
+        elif ("₹" in budget_raw or "inr" in budget_raw or "rs" in budget_raw) and clean_num < 1500:
+            return False, f"Budget of ₹{clean_num:,.0f} is below the minimum daily baseline (₹1,500/day) for {destination}."
+            
+    return True, ""
+
+
 # with guardrail
 def supervisor_agent(state: TravelState):
     query = state["user_query"]
             
-    # INPUT GUARDRAIL
+    # TIER 1: SECURITY GUARDRAIL (Prompt Injection & Adversarial Attack Check)
+    is_safe, sec_reason = check_security_guardrail(query)
+    if not is_safe:
+        print(f"\n[SECURITY GUARDRAIL BLOCKED] {sec_reason}\n")
+        return {
+            "selected_agents": [],
+            "trip_constraints": {},
+            "supervisor_reasoning": sec_reason,
+            "final_response": f"🛡️ **Security Guardrail Alert**: Request blocked due to detected adversarial prompt injection attempt (`{sec_reason}`).",
+            "messages": [AIMessage(content=f"Security guardrail blocked request: {sec_reason}")],
+            "llm_calls": state.get("llm_calls", 0),
+        }
+
+    # TIER 2: INPUT DOMAIN VALIDATION GUARDRAIL
     guardrail_prompt = f"""
     Determine whether the following request is a valid travel planning request.
 
@@ -383,14 +444,21 @@ def budget_agent(state: TravelState):
     print(state.get("weather_results"))
     print("=========================================\n")
 
+    constraints = state.get("trip_constraints", {})
+    budget_ok, budget_warning = check_budget_sanity(constraints)
+    guardrail_banner = ""
+    if not budget_ok:
+        guardrail_banner = f"\n⚠️ **BUDGET GUARDRAIL ALERT**: {budget_warning}\n"
+        print(f"\n[BUDGET GUARDRAIL WARNING] {budget_warning}\n")
+
     prompt = f"""
-Analyze whether this trip plan is realistic for the user's budget.
+You are a practical travel budget analyst enforcing strict financial sanity guardrails.
 
 User request:
 {state['user_query']}
 
-Constraints:
-{state.get('trip_constraints', {})}
+Trip Constraints:
+{constraints}
 
 Flight results:
 {state.get('flight_results', '')}
@@ -401,25 +469,27 @@ Hotel results:
 Weather results:
 {state.get('weather_results', '')}
 
-Return a concise budget assessment with:
-1. estimated cost categories
-2. risk areas
-3. money-saving suggestions
-4. whether the plan seems feasible
+BUDGET GUARDRAIL POLICY:
+1. Realistically evaluate if the declared budget can cover flights, lodging, meals, and local transit.
+2. If the user's budget is mathematically impossible or dangerously tight, trigger a clear DEFICIT WARNING and state the realistic minimum cost required.
+3. Categorize estimated expenses (Flights, Hotels, Food/Activities, Buffer).
+4. Provide actionable money-saving advice and declare clearly if the plan is: "FEASIBLE", "BORDERLINE", or "UNFEASIBLE".
 """
 
     result = _llm_text(
-        "You are a practical travel budget analyst.",
+        "You are an expert travel budget analyst enforcing financial realism.",
         prompt,
     )
 
+    final_budget_output = f"{guardrail_banner}\n{result}".strip()
+
     print("\n========== BUDGET AGENT OUTPUT ==========")
-    print(result)
+    print(final_budget_output)
     print("=========================================\n")
 
     return {
-        "budget_results": result,
-        "messages": [AIMessage(content="Budget agent completed.")],
+        "budget_results": final_budget_output,
+        "messages": [AIMessage(content="Budget agent completed with sanity guardrail.")],
         "llm_calls": state.get("llm_calls", 0) + 1,
     }
 
@@ -444,6 +514,16 @@ def itinerary_agent(state: TravelState):
     print(state.get("budget_results"))
     print("===========================================\n")
 
+    feedback_instruction = ""
+    if state.get("human_feedback"):
+        feedback_instruction = f"""
+IMPORTANT HUMAN REVISION REQUEST:
+The user reviewed the previous draft and requested the following changes:
+"{state['human_feedback']}"
+
+Please thoroughly revise the itinerary to incorporate this feedback.
+"""
+
     prompt = f"""
 Create a clear draft travel itinerary.
 
@@ -464,7 +544,7 @@ Weather results:
 
 Budget results:
 {state.get('budget_results', '')}
-
+{feedback_instruction}
 Make the output structured, practical, and ready for human review.
 """
 
