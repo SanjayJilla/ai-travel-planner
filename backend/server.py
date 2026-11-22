@@ -1,5 +1,18 @@
 import os
+import sys
+
+# Ensure backend directory is in sys.path and current working directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+try:
+    os.chdir(BASE_DIR)
+except Exception:
+    pass
+
+import asyncio
 import uuid
+import re
 from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +21,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 
 from graph import app
-from config import DATABASE_URL
+from config import DATABASE_URL, get_llm
 from analytics_db import (
     get_trending_trips_data, 
     record_search_analytics, 
@@ -59,7 +72,7 @@ class CreateUserRequest(BaseModel):
 def root():
     return {
         "status": "online",
-        "service": "AI Travel Planner Multi-Agent API",
+        "service": "TripGenie Multi-Agent API",
         "endpoints": ["/api/status", "/api/plan", "/api/resume", "/api/trending-trips", "/api/users"]
     }
 
@@ -327,4 +340,4 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
     print(f"\n🚀 Starting TripGenie REST Backend on port {port} ...\n")
-    uvicorn.run("server:server", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run(server, host="0.0.0.0", port=port)
