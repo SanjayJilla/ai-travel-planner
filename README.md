@@ -1,96 +1,93 @@
-# ✈️ VoyageAI — Autonomous Multi-Agent Travel Planner
+# ✈️ TripGenie — AI Travel Planner
 
-A production-grade, enterprise travel planning application powered by **LangGraph**, **FastAPI**, **React 18 + Vite**, and the **Model Context Protocol (MCP)**.
+**TripGenie** is a smart, personal travel planner that turns any trip idea into a complete, day-by-day itinerary with flights, hotels, weather, and budget breakdown in seconds.
 
 ---
 
-## 🏗️ Decoupled Full-Stack Architecture
+## 🌟 What TripGenie Does
+
+- **🗓️ Day-by-Day Itineraries**: Generates clean, organized schedules with morning, afternoon, and evening plans.
+- **⚡ Instant Memory Match**: Uses local AI memory (ChromaDB) to recall verified itineraries for popular destinations in ~0.2 seconds.
+- **👤 Traveler Profiles**: Switch between traveler profiles (Sanjay, Alice, Rahul) or add your own name with zero friction.
+- **🔥 Top 5 Trips**: Automatically tracks and displays the 5 most requested getaways.
+- **✍️ You're in Control (Review & Edit)**: Always shows you a draft first. Approve it to finalize, or tell TripGenie what to adjust and it will regenerate the plan for you.
+- **💰 Budget & Flight Tracking**: Keeps recommendations realistic and within your target budget.
+
+---
+
+## 🚀 How to Run TripGenie Locally
+
+### Prerequisites
+- **Python 3.10+**
+- **Node.js 18+**
+
+---
+
+### Step 1: Start the Backend (API Server)
+
+Open your terminal:
+```bash
+cd backend
+pip install -r requirements.txt
+python server.py
+```
+*Your backend will be live at `http://localhost:8000`.*
+
+---
+
+### Step 2: Start the Frontend (User Interface)
+
+Open a second terminal window:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*Your frontend will open at `http://localhost:5173`.*
+
+---
+
+## 🔑 Configuration (`.env`)
+
+Inside the `backend/` folder, create a `.env` file with your free API keys:
+
+```ini
+GROQ_API_KEY=your_groq_api_key_here
+TAVILY_API_KEY=your_tavily_api_key_here
+```
+
+*(Optional keys for real-time flights and weather)*:
+```ini
+OPENWEATHER_API_KEY=your_openweather_key
+AVIATIONSTACK_API_KEY=your_aviationstack_key
+```
+
+---
+
+## 📁 Project Structure
 
 ```
 ITINERARY AGENT/
-├── backend/                       # Python LangGraph & FastAPI REST API
-│   ├── server.py                  # FastAPI REST endpoints (/api/plan, /api/resume, /api/status)
-│   ├── graph.py                   # LangGraph StateGraph (Parallel Fan-Out + Cyclic HITL)
-│   ├── agents.py                  # Specialized agents (Flight, Hotel, Weather, Budget, Itinerary)
-│   ├── state.py                   # TypedDict state schema with reducer channels
-│   ├── config.py                  # Environment settings, LLMs, PostgreSQL checkpointer
-│   ├── mcp_client.py              # MultiServerMCPClient with fallback cascade
-│   ├── custom_weather_mcp_server.py # FastMCP OpenWeatherMap microservice
-│   ├── requirements.txt           # Python dependencies
-│   ├── .env                       # API keys & configuration
-│   └── diagrams/                  # System flowcharts & architecture blueprints
+├── backend/                  # Python API & Travel Intelligence
+│   ├── server.py             # REST API server (FastAPI)
+│   ├── vector_memory.py      # Local AI memory store (ChromaDB)
+│   ├── analytics_db.py       # Traveler accounts & Top 5 counter (SQLite)
+│   ├── agents.py             # Specialist travel planning agents
+│   ├── graph.py              # Agent workflow coordinator
+│   └── requirements.txt      # Lightweight production dependencies
 │
-├── frontend/                      # Modern React + Vite Application
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Header.jsx         # Telemetry badges, system status, architecture trigger
-│   │   │   ├── TripForm.jsx       # Query input + suggestion chips (incl. security attack chip)
-│   │   │   ├── PipelineStatus.jsx # 6-stage live orchestration stepper
-│   │   │   ├── SpecialistCards.jsx# Parallel specialist results (Flights, Hotels, Weather, Budget)
-│   │   │   ├── HITLReviewCard.jsx # Human-in-the-Loop review card with feedback revision loop
-│   │   │   ├── FinalItinerary.jsx # Final verified plan, PDF/Print exporter, Markdown copy
-│   │   │   └── ArchitectureModal.jsx # Interactive in-app system flowchart & DFD modal
-│   │   ├── services/
-│   │   │   └── api.js             # REST API client connecting to FastAPI backend
-│   │   ├── App.jsx                # State orchestration
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── package.json
-│   └── vite.config.js
-│
-├── run_backend.bat                # 1-click backend launcher (Port 8000)
-├── run_frontend.bat               # 1-click frontend launcher (Port 5173)
-├── start_all.bat                  # 1-click master launcher for both services
-└── README.md
+└── frontend/                 # Modern React Web Application
+    ├── src/
+    │   ├── components/       # Clean travel UI cards, header, and sidebar
+    │   ├── services/api.js   # Fast API connector
+    │   └── App.jsx           # Main planner application
+    ├── package.json          # Frontend packages
+    └── vercel.json           # Vercel deployment configuration
 ```
 
 ---
 
-## ⚡ Quick Start
+## ☁️ Deployment
 
-### 1. Master 1-Click Launch (Recommended)
-Simply double-click:
-```bash
-start_all.bat
-```
-This automatically boots:
-- The **FastAPI Backend** on `http://localhost:8000`
-- The **React Frontend** on `http://localhost:5173`
-- Opens your default web browser to the application interface.
-
----
-
-### 2. Manual Terminal Launch
-
-#### Step 1: Start Backend
-```bash
-cd backend
-python server.py
-```
-*Backend Swagger API docs will be live at `http://localhost:8000/docs`.*
-
-#### Step 2: Start Frontend
-```bash
-cd frontend
-npm run dev
-```
-*React app will be live at `http://localhost:5173`.*
-
----
-
-## 🌟 Key Product Capabilities
-
-1. **True Parallel Fan-Out Execution**:
-   - Supervisor dispatches Flight, Hotel, and Weather MCP agents concurrently via async gathering, accelerating execution by ~60%.
-
-2. **Human-in-the-Loop (HITL) Checkpointing & Cyclic Loop**:
-   - Pauses graph execution using LangGraph `interrupt()`.
-   - If user requests changes with natural language feedback, the graph loops back to `itinerary_agent` to synthesize revisions without re-running flight/hotel MCP tools from scratch.
-
-3. **3-Tier Enterprise Guardrails**:
-   - **Tier 1 (Regex Security)**: Filters prompt injection attacks (`0ms` latency).
-   - **Tier 2 (Domain Relevance)**: LLM classifier restricts scope strictly to travel requests.
-   - **Tier 3 (Budget Math Sanity)**: Validates that expenses do not exceed user-specified budget ceilings.
-
-4. **Multi-Server MCP Cascade**:
-   - Connects to AviationStack MCP, OpenWeather FastMCP, and Tavily Search MCP with graceful parametric fallback.
+- **Frontend**: One-click deployment on **Vercel** (points to the `frontend/` folder).
+- **Backend**: One-click deployment on **Render** or **Fly.io** (points to the `backend/` folder).
