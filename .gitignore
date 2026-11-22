@@ -51,8 +51,25 @@ Thumbs.db
 .idea/
 
 # ==========================================
-# Unused / Redundant Folders
+# Frontend & Vector DB
 # ==========================================
-AI-Travel-Planning-System-using-LangGraph/
-diagrams
+node_modules/
+*/node_modules/
+dist/
+*/dist/
+chroma_db/
+*/chroma_db/
+
+# ==========================================
+# Diagrams & Documentation
+# ==========================================
+diagrams/
+*/diagrams/
 ARCHITECTURE_DIAGRAMS.md
+*/ARCHITECTURE_DIAGRAMS.md
+system_flowchart_report.png
+
+# ==========================================
+# Windows Batch Scripts
+# ==========================================
+*.bat

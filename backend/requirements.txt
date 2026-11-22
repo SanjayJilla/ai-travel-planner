@@ -1,0 +1,21 @@
+# ── TripGenie Production Dependencies ──────────────────────────────────────────
+
+# Web Framework & REST Server
+fastapi>=0.110.0
+uvicorn>=0.30.0
+pydantic>=2.7.0
+python-dotenv>=1.0.0
+
+# Multi-Agent Orchestration & LLMs
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-groq>=0.2.0
+langchain-mcp-adapters>=0.1.0
+mcp>=1.0.0
+
+# Semantic Vector Memory
+chromadb>=0.5.0
+
+# Search & HTTP Tools
+requests>=2.31.0
+tavily-python>=0.5.0
