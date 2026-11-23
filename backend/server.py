@@ -14,8 +14,9 @@ import asyncio
 import uuid
 import re
 from typing import Optional, Dict, Any, List
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
@@ -37,6 +38,15 @@ server = FastAPI(
     description="Enterprise Multi-Agent Travel Orchestration Backend powered by LangGraph, MCP, ChromaDB, and SQLite.",
     version="2.0.0"
 )
+
+# Middleware to normalize repeated slashes (e.g. //api/status -> /api/status)
+class NormalizePathMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if "//" in request.scope.get("path", ""):
+            request.scope["path"] = re.sub(r"/+", "/", request.scope["path"])
+        return await call_next(request)
+
+server.add_middleware(NormalizePathMiddleware)
 
 # Enable CORS for React frontend (Vite default is 5173 / localhost:3000)
 server.add_middleware(

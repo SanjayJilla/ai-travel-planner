@@ -1,7 +1,9 @@
 /**
  * API Service for interacting with FastAPI Agentic Travel Planner Backend
  */
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const RAW_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Strip trailing slashes to prevent double slashes (e.g., https://backend.onrender.com//api/status)
+const BASE_URL = RAW_URL.replace(/\/+$/, '');
 
 export async function fetchUsers() {
   try {
